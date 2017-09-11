@@ -1,0 +1,274 @@
+// React Components
+const { Component, Children, PropTypes } = React;
+class Application extends Component {
+  render() {
+    return (
+      <main className="wiki-calculator">
+        <Header />
+        <Button />
+        <Search />
+      </main>
+    );
+  }
+}
+Application.defaultProps = {
+  isSearching: false
+};
+
+class Header extends Component {
+  render() {
+    return (
+      <div className="hero-section">
+        <div className="hero-section-text">
+          <h1>Wiki Viewer</h1>
+          <h5>A Project from Free Code Camp</h5>
+          <p>
+            By
+            {" "}<a href="https://devingrayllc.com" target="_blank">
+              Devin Gray LLC
+            </a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+}
+
+class Button extends Component {
+  render() {
+    return (
+      <a
+        className="button button-rounded-hover right"
+        href="https://en.wikipedia.org/wiki/Special:Random"
+        target="_blank"
+      >
+        Lookup Random Article
+      </a>
+    );
+  }
+}
+
+class Search extends Component {
+  constructor(props) {
+    super(props);
+    this.changeSearching = this.changeSearching.bind(this);
+    this.updateQuery = this.updateQuery.bind(this);
+    this.state = {
+      query: null,
+      searching: false
+    };
+  }
+  changeSearching(bool) {
+    this.setState({ searching: bool });
+  }
+  updateQuery(query) {
+    this.setState({ query });
+  }
+  render() {
+    return (
+      <div id="search-container">
+        <SearchBar
+          changeSearching={this.changeSearching}
+          updateQuery={this.updateQuery}
+        />
+        {this.state.searching &&
+          <PanelResults
+            searching={this.state.searching}
+            query={this.state.query}
+          />}
+      </div>
+    );
+  }
+}
+
+class SearchBar extends Component {
+  constructor(props) {
+    super(props);
+    this.handleChange = this.handleChange.bind(this);
+    this.state = { value: "" };
+  }
+  handleChange(event) {
+    this.setState({ value: event.target.value });
+    this.props.changeSearching(true);
+    this.props.updateQuery(event.target.value);
+  }
+  render() {
+    return (
+      <div className="input-group input-group-rounded">
+        <input
+          id="search-term"
+          className="input-group-field"
+          type="search"
+          value={this.state.value}
+          onChange={this.handleChange}
+        />
+        <div className="input-group-button">
+          <input
+            id="search-button"
+            type="submit"
+            className="button secondary"
+            value="Search"
+            onClick={this.handleChange}
+          />
+        </div>
+      </div>
+    );
+  }
+}
+
+class PanelResults extends Component {
+  constructor(props) {
+    super(props);
+    this.handleSearch = this.handleSearch.bind(this);
+    this.onSuccess = this.onSuccess.bind(this);
+    this.onError = this.onError.bind(this);
+
+    this.state = {
+      data: null,
+      query: ""
+    };
+  }
+  componentDidMount() {
+    if (this.props.query) {
+      this.handleSearch(this.props.query);
+    }
+  }
+  componentDidUpdate(prevProps, prevState) {
+    if (prevProps.query !== this.props.query) {
+      this.handleSearch(this.props.query);
+    }
+  }
+  handleSearch(query) {
+    let searchTerm = query,
+      url = [
+        "https://en.wikipedia.org/w/api.php",
+        "?action=opensearch&search=",
+        searchTerm,
+        "&format=json&callback=?"
+      ].join("");
+    setTimeout(() => {
+      $.ajax({
+        type: "GET",
+        url: url,
+        async: true,
+        dataType: "json",
+        success: this.onSuccess,
+        error: this.onError
+      });
+    }, 500);
+  }
+  onSuccess(data) {
+    this.setState({
+      data: data,
+      query: this.props.query
+    });
+  }
+  onError(err) {
+    alert("Error:" + err);
+  }
+  render() {
+    return (
+      <div className="posts-panel center">
+        <PanelHeader title={this.props.query} />
+        <PanelContent data={this.state.data} />
+      </div>
+    );
+  }
+}
+class PanelHeader extends Component {
+  render() {
+    return (
+      <header className="panel-header">
+        <h1 className="panel-title">{this.props.title}</h1>
+      </header>
+    );
+  }
+}
+class PanelContent extends Component {
+  constructor(props) {
+    super(props);
+    this.handlePosts = this.handlePosts.bind(this);
+    this.state = {
+      posts: []
+    };
+  }
+  componentDidMount() {
+    if (this.props.data) {
+      this.handlePosts(this.props.data);
+    }
+  }
+  shouldComponentUpdate(nextProps, nextState) {
+    return nextProps !== this.props;
+  }
+  componentWillUpdate(nextProps, nextState) {
+    if (this.props.data && this.props.data !== nextProps.data) {
+      this.handlePosts(nextProps.data);
+      console.log(
+        "nextProps:",
+        nextProps,
+        "this.props:",
+        this.props,
+        "nextState:",
+        nextState,
+        "this.state:",
+        this.state
+      );
+    }
+  }
+
+  handlePosts(data) {
+    if (data) {
+      let title = [...data[1]],
+        description = [...data[2]],
+        link = [...data[3]],
+        count = title.length,
+        posts = this.state.posts;
+      // Loop
+      for (let i = 0; i < count; i++) {
+        let key = i.toString(),
+          post = (
+            <div key={key} className="panel-content">
+              <section className="pinned-post">
+                <div className="post-item">
+                  <div className="post-text">
+                    <a key={key} href={link[i]} target="_blank">
+                      <h3 key={key} className="post-title">{title[i]}</h3>
+                    </a>
+                    <div className="post-summary">
+                      <p key={key}>
+                        {description[i]}
+                        <a
+                          href={link[i]}
+                          target="_blank"
+                          className="post-read-more"
+                        >
+                          Read more<span
+                            className="fa fa-chevron-circle-right"
+                            aria-hidden="true"
+                          />
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          );
+        if (posts[i] !== post) {
+          posts.splice(i, posts.length);
+          posts.push(post);
+        }
+      } // End For Loop
+      this.setState({ posts });
+    }
+  }
+
+  render() {
+    const postList = this.state.posts;
+    return <div>{postList}</div>;
+  }
+}
+
+// Render the above component into the div#react
+
+ReactDOM.render(<Application />, document.querySelector("body"));
